@@ -1,101 +1,157 @@
-import Image from "next/image";
+"use client"
 
+import { ModalConfirmation } from "@/components/ModalConfirmation";
+import { submitFormWithDelay, validateFormWithDelay } from "@/utils/validation";
+import { InputLabel, MenuItem, Select, SelectChangeEvent, Stack, TextField } from "@mui/material";
+import { useEffect, useState } from "react";
+import { SubmitHandler, useForm } from "react-hook-form";
+import toast, { Toaster } from "react-hot-toast";
+export type Inputs = {
+  currentAccount: string
+  name: string;
+  lastName: string;
+  age: string;
+  email: string;
+  phone: string;
+}
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  function fetchAccountTypes() {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(['Conto A', 'Conto B', 'Conto C']);
+      }, 1000);
+    });
+  }
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const [dataForm, setDataForm] = useState<Inputs>();
+  const [openModal, setOpenModal] = useState(false);
+  const [currentAccount, setCurrentAccount] = useState<string[]>()
+  const [selectedCurrentAccount, setSelectedCurrentAccount] = useState<string>("")
+  const [isLoadingSubmit, setIsLoadingSubmit] = useState(false)
+  const [isLoadingValidation, setIsLoadingValidation] = useState(false)
+  useEffect(() => {
+    fetchAccountTypes().then((data) => {
+      setCurrentAccount(data as string[])
+    })
+  }, [])
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<Inputs>()
+
+  // Watching phone and email fields for conditional validation
+  const phone = watch("phone");
+  const email = watch("email");
+
+  const handleChange = (event: SelectChangeEvent) => {
+    setSelectedCurrentAccount(event.target.value as string);
+    setValue('currentAccount', event.target.value as string)
+  };
+
+  const onSubmit: SubmitHandler<Inputs> = async (data) => {
+    try {
+      setIsLoadingValidation(true)
+      const response = await validateFormWithDelay(data);
+      if (!response.isValid) {
+        response?.errors?.forEach((error) => {
+          toast.error(error.message)
+        });
+        return;
+      }
+      if (response.isValid && response.data) {
+        setOpenModal(true)
+        setDataForm(response.data)
+      }
+    } catch (error) {
+      toast.error(error)
+    } finally {
+      setIsLoadingValidation(false)
+    }
+  }
+
+  const handleConfirmation = async (inputs: Inputs) => {
+    try {
+      setIsLoadingSubmit(true)
+      await submitFormWithDelay(inputs);
+
+      setOpenModal(false)
+      toast.success("Dati inviati con successo")
+    } catch (error) {
+      toast.error(error)
+
+    } finally {
+      setIsLoadingSubmit(false)
+    }
+
+
+  }
+
+
+  return (
+    <Stack width={400} spacing={2} sx={{ margin: "auto", marginTop: 10 }}>
+      <Toaster />
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <InputLabel id="demo-simple-select-label">Current Account</InputLabel>
+        <Select fullWidth
+          className="mb-4"
+          {...register("currentAccount")}
+          labelId="demo-simple-select-label"
+          id="demo-simple-select"
+          value={selectedCurrentAccount}
+          label="Current Account"
+          onChange={handleChange}
+        >
+          {currentAccount?.map((account) => <MenuItem key={account} value={account}>{account}</MenuItem>
+          )}
+
+        </Select>
+        <div className="flex flex-col space-y-4">
+          <TextField type="text" id="outlined-name" label="Name" variant="outlined" {...register("name")} />
+          <TextField type="text" id="outlined-lastName" label="Last Name" variant="outlined" {...register("lastName")} />
+          <TextField type="email" id="outlined-email" label="Email" variant="outlined" {...register("email", {
+            validate: (value) =>
+              !value && !phone
+                ? "Email o telefono è obbligatorio."
+                : true,
+          })}
+            error={!!errors.email}
+            helperText={errors.email?.message} />
+          <TextField type="text" id="outlined-phone" label="Phone" variant="outlined"{...register("phone", {
+            validate: (value) =>
+              !value && !email
+                ? "Telefono o email è obbligatorio."
+                : true,
+            pattern: {
+              value: /^[0-9]+$/,
+              message: "Il numero di telefono deve contenere solo numeri.",
+            }
+          },
+          )}
+
+            error={!!errors.phone}
+            helperText={errors.phone?.message} />
+          <TextField type="number" id="outlined-age" label="Age" variant="outlined" {...register("age")} />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        <button
+          disabled={isLoadingValidation}
+          type="submit"
+          className="mt-4 bg-blue-500 text-white font-bold py-2 px-4 rounded w-full cursor-pointer hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          Invia
+        </button>
+      </form>
+      <ModalConfirmation
+        open={openModal}
+        handleClose={() => setOpenModal(false)}
+        inputs={dataForm as Inputs}
+        handleConfirmation={(inputs) => handleConfirmation(inputs)}
+        loading={isLoadingSubmit}
+      />
+    </Stack>
   );
 }
