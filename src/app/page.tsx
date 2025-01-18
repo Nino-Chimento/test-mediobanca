@@ -7,6 +7,7 @@ import {
   validateFormWithDelay,
 } from '@/utils/api';
 import {
+  Alert,
   Box,
   CircularProgress,
   InputLabel,
@@ -33,20 +34,24 @@ export type Inputs = {
 export default function Home() {
   const {
     data: currentAccount,
-    error,
-    isLoading,
+    error: errorFetchAccounts,
+    isLoading: isLoadingAccounts,
   } = useSWR('/api/accounts', fetchAccountTypesDelay);
 
-  const { trigger, isMutating: isLoadingSubmit } = useSWRMutation(
-    '/api/submit', // chiave dell'endpoint
+  const { trigger:triggerSubmit, isMutating: isLoadingSubmit } = useSWRMutation(
+    '/api/submit',
     (key: string, { arg }: { arg: Inputs }) => submitFormWithDelay(arg)
   );
+
+  const { trigger: triggerValidation, isMutating: isLoadingValidation } =
+    useSWRMutation('/api/validation', (key: string, { arg }: { arg: Inputs }) =>
+      validateFormWithDelay(arg)
+    );
 
   const [dataForm, setDataForm] = useState<Inputs>();
   const [openModal, setOpenModal] = useState(false);
   const [selectedCurrentAccount, setSelectedCurrentAccount] =
     useState<string>('');
-  const [isLoadingValidation, setIsLoadingValidation] = useState(false);
 
   const {
     register,
@@ -67,8 +72,8 @@ export default function Home() {
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     try {
-      setIsLoadingValidation(true);
-      const response = await validateFormWithDelay(data);
+      const response = await triggerValidation(data);
+
       if (!response.isValid) {
         response?.errors?.forEach((error) => {
           toast.error(error.message);
@@ -81,14 +86,12 @@ export default function Home() {
       }
     } catch (error) {
       toast.error(error);
-    } finally {
-      setIsLoadingValidation(false);
     }
   };
 
   const handleConfirmation = async (inputs: Inputs) => {
     try {
-      await trigger(inputs);
+      await triggerSubmit(inputs);
       setOpenModal(false);
       toast.success('Dati inviati con successo');
     } catch (error) {
@@ -97,13 +100,13 @@ export default function Home() {
     }
   };
 
-  if (isLoading)
+  if (isLoadingAccounts)
     return (
       <Box className="flex justify-center items-center h-screen">
         <CircularProgress />
       </Box>
     );
-  if (error) return <div>Errore: {error.message}</div>;
+  if (errorFetchAccounts) return <Alert severity="error">Errore: {errorFetchAccounts?.message}</Alert>
 
   return (
     <Stack width={400} spacing={2} sx={{ margin: 'auto', marginTop: 10 }}>
