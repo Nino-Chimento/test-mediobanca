@@ -10,7 +10,6 @@ interface ModalConfirmationProps {
 
 
 export const ModalConfirmation = ({ open, handleClose, inputs, handleConfirmation, loading }: ModalConfirmationProps) => {
-    console.log(inputs, "Inputs");
 
     return <Modal
         open={open}

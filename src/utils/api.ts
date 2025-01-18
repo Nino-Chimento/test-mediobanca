@@ -133,3 +133,11 @@ export async function submitFormWithDelay(inputs: Inputs): Promise<Inputs> {
         }, 1000);
     });
 }
+
+export function fetchAccountTypesDelay(): Promise<string[]> {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(['Conto A', 'Conto B', 'Conto C']);
+        }, 1000);
+    });
+}
