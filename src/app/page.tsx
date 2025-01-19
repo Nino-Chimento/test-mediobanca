@@ -9,6 +9,7 @@ import {
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   InputLabel,
   MenuItem,
@@ -38,10 +39,10 @@ export default function Home() {
     isLoading: isLoadingAccounts,
   } = useSWR('/api/accounts', fetchAccountTypesDelay);
 
-  const { trigger:triggerSubmit, isMutating: isLoadingSubmit } = useSWRMutation(
-    '/api/submit',
-    (key: string, { arg }: { arg: Inputs }) => submitFormWithDelay(arg)
-  );
+  const { trigger: triggerSubmit, isMutating: isLoadingSubmit } =
+    useSWRMutation('/api/submit', (key: string, { arg }: { arg: Inputs }) =>
+      submitFormWithDelay(arg)
+    );
 
   const { trigger: triggerValidation, isMutating: isLoadingValidation } =
     useSWRMutation('/api/validation', (key: string, { arg }: { arg: Inputs }) =>
@@ -102,26 +103,50 @@ export default function Home() {
 
   if (isLoadingAccounts)
     return (
-      <Box className="flex justify-center items-center h-screen">
-        <CircularProgress />
+      <Box
+        className="flex justify-center items-center h-screen"
+        role="status"
+        aria-label="Caricamento dati in corso"
+      >
+        <CircularProgress aria-hidden="true" />
       </Box>
     );
-  if (errorFetchAccounts) return <Alert severity="error">Errore: {errorFetchAccounts?.message}</Alert>
+
+  if (errorFetchAccounts)
+    return (
+      <Alert severity="error" role="alert">
+        Errore: {errorFetchAccounts?.message}
+      </Alert>
+    );
 
   return (
-    <Stack width={400} spacing={2} sx={{ margin: 'auto', marginTop: 10 }}>
+    <Stack
+      width={400}
+      spacing={2}
+      sx={{ margin: 'auto', marginTop: 10 }}
+      component="main"
+      role="main"
+      aria-label="Form di registrazione"
+    >
       <Toaster />
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <InputLabel id="demo-simple-select-label">Current Account</InputLabel>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        aria-label="Form di registrazione utente"
+      >
+        <InputLabel id="current-account-label">Current Account</InputLabel>
         <Select
           fullWidth
           className="mb-4"
           {...register('currentAccount')}
-          labelId="demo-simple-select-label"
-          id="demo-simple-select"
+          labelId="current-account-label"
+          id="current-account"
           value={selectedCurrentAccount}
           label="Current Account"
           onChange={handleChange}
+          aria-describedby={
+            errors.currentAccount ? 'current-account-error' : undefined
+          }
         >
           {currentAccount?.map((account) => (
             <MenuItem key={account} value={account}>
@@ -129,24 +154,34 @@ export default function Home() {
             </MenuItem>
           ))}
         </Select>
-        <div className="flex flex-col space-y-4">
+        <div
+          className="flex flex-col space-y-4"
+          role="group"
+          aria-labelledby="personal-info-section"
+        >
           <TextField
             type="text"
-            id="outlined-name"
-            label="Name"
+            id="name"
+            label="Nome"
             variant="outlined"
+            error={!!errors.name}
+            helperText={errors.name?.message}
             {...register('name')}
+            aria-describedby={errors.name ? 'name-error' : undefined}
           />
           <TextField
             type="text"
-            id="outlined-lastName"
+            id="lastName"
             label="Last Name"
             variant="outlined"
+            aria-describedby={errors.lastName ? 'lastname-error' : undefined}
+            error={!!errors.lastName}
+            helperText={errors.lastName?.message}
             {...register('lastName')}
           />
           <TextField
             type="email"
-            id="outlined-email"
+            id="email"
             label="Email"
             variant="outlined"
             {...register('email', {
@@ -155,10 +190,11 @@ export default function Home() {
             })}
             error={!!errors.email}
             helperText={errors.email?.message}
+            aria-describedby={errors.email ? 'email-error' : undefined}
           />
           <TextField
-            type="text"
-            id="outlined-phone"
+            type="tel"
+            id="phone"
             label="Phone"
             variant="outlined"
             {...register('phone', {
@@ -171,23 +207,31 @@ export default function Home() {
             })}
             error={!!errors.phone}
             helperText={errors.phone?.message}
+            aria-describedby={errors.phone ? 'phone-error' : undefined}
           />
           <TextField
             type="number"
-            id="outlined-age"
+            id="age"
             label="Age"
             variant="outlined"
             {...register('age')}
+            error={!!errors.age}
+            helperText={errors.age?.message}
+            aria-describedby={errors.age ? 'age-error' : undefined}
           />
         </div>
 
-        <button
+        <Button
+          variant="contained"
           disabled={isLoadingValidation}
+          loading={isLoadingValidation}
           type="submit"
           className="mt-4 bg-blue-500 text-white font-bold py-2 px-4 rounded w-full cursor-pointer hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          aria-busy={isLoadingValidation}
+          aria-disabled={isLoadingValidation}
         >
           Invia
-        </button>
+        </Button>
       </form>
       <ModalConfirmation
         open={openModal}

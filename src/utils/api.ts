@@ -72,7 +72,7 @@ async function validateForm(
   }
 
   // Validate name and surname (at least 2 characters, letters only)
-  const nameRegex = /^[A-Za-zÀ-ÿ]{2,}$/;
+  const nameRegex = /^[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*$/;
   if (!nameRegex.test(inputs.name!)) {
     errors.push({
       field: 'name',
